@@ -1,0 +1,6 @@
+* Fix the bug on Windows where the KISS TNC cannot be used straight away.
+  A work around is to use a program like UI-View. Check that you can read data
+  Then use this module per usual.
+* Implement methods to write to a KISS TNC.
+* Implement methods to write AX.25 frames.
+* Implement Frame Check Sequences (FCS) or CRCs.

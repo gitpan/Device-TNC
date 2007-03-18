@@ -20,7 +20,7 @@ WriteMakefile(
 	'ABSTRACT'	=> "A generic interface to Terminal Node Controllers (TNC's) and KISS mode TNC's",
 	'PREREQ_PM'	=> {
 		$serial_module		=> 0.01,
-		'Digest::CRC'		=> 0.09,
 		'Data::Translate'	=> 0.2,
+		'FileHandle' 		=> 2.0,
 		},
 );

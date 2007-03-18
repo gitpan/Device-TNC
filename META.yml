@@ -1,13 +1,13 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Device-TNC
-version:      0.01
+version:      0.02
 version_from: lib/Device/TNC.pm
 installdirs:  site
 requires:
     Data::Translate:               0.2
     Device::SerialPort:            0.01
-    Digest::CRC:                   0.09
+    FileHandle:                    2
 
 distribution_type: module
 generated_by: ExtUtils::MakeMaker version 6.30

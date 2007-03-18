@@ -1,7 +1,7 @@
 
 =head1 NAME
 
-Device::TNC::KISS - A module to talk to a KISS mode TNC
+Device::TNC::KISS - Device::TNC subclass interface to a KISS mode TNC
 
 =head1 DESCRIPTION
 
@@ -11,12 +11,21 @@ Controller (TNC) such as the TNC-X via a serial port.
 =head1 SYNOPSIS
 
   use Device::TNC::KISS;
+
+  To read data direct from a TNC:
   my %tnc_config = (
     'port' => ($Config{'osname'} eq "MSWin32") ? "COM3" : "/dev/TNC-X",
     'baudrate' => 9600,
     'warn_malformed_kiss' => 1,
     'raw_log' => "raw_packet.log",
   );
+
+  To read data from a raw KISS log file
+  my %tnc_config = (
+    'warn_malformed_kiss' => 1,
+    'file' => "raw_packet.log",
+  );
+
   my $kiss_tnc = new Device::TNC::KISS(%tnc_config);
 
   my $kiss_frame = $kiss_tnc->read_kiss_frame();
@@ -110,6 +119,14 @@ If you want to keep a log of the raw packets that are read then set raw_log to
 the name of the log file you which to write to. If there is an error opening the
 log file the
 
+=item B<file>
+
+Use to read KISS frames from a file instead of a port. Using this option will
+cause the module to ignore any port, baudrate and raw_log options.
+
+The value for this option should be a raw KISS log file such as that created via
+the raw_log option.
+
 =back
 
 The returned object contains a reference to a serial port object which is either a
@@ -135,8 +152,9 @@ sub new
 	my $class = shift;
 	my %port_data = @_;
 
-	my $baudrate = undef;
+	my $baudrate;
 	my %data;
+	my $raw_log_file;
 	foreach my $key (keys %port_data)
 	{
 		if (lc($key) eq "port")
@@ -151,51 +169,75 @@ sub new
 		{
 			$data{'WARN_MALFORMED_KISS'} = 1;
 		}
+		if (lc($key) eq "file")
+		{
+			$data{'FILE'} = $port_data{$key};
+		}
 		if (lc($key) eq "raw_log")
 		{
-			$m_raw_log = new FileHandle();
-			if ($m_raw_log->open(">>$port_data{$key}"))
-			{
-				$m_raw_log->autoflush(1);
-				$data{'RAW_LOG'} = $m_raw_log;
-			}
-			else
-			{
-				warn "Warning: Cannot open raw log file \"$port_data{$key}\" for append: $!\n";
-			}
+			$raw_log_file = $port_data{$key};
 		}
 	}
-	unless ($m_port_name)
-	{
-		warn "Error: No port was specified in the past data.\n";
-		return undef;
-	}
-	unless ($baudrate)
-	{
-		warn "Error: No baudrate was specified in the past data.\n";
-		return undef;
-	}
 
-	if ($Config{'osname'} eq "MSWin32")
+	if ($data{'FILE'})
 	{
-		$m_port = new Win32::SerialPort($m_port_name) or
-			warn "Error: Cannot open serial port \"$m_port_name\": $^E\n";
+		my $file = new FileHandle();
+		if ($file->open("<$data{'FILE'}"))
+		{
+			$file->autoflush(1);
+			$data{'FILE_HANDLE'} = $file;
+		}
+		else
+		{
+			warn "Warning: Cannot open raw KISS log file \"$data{'FILE'}\" for reading: $!\n";
+			return undef;
+		}
 	}
 	else
 	{
-		$m_port = new Device::SerialPort($m_port_name) or
-			warn "Error: Cannot open serial port \"$m_port_name\": $!\n";
-	}
-	$m_port->baudrate($baudrate);
-	$m_port->parity("none");
-	$m_port->databits(8);
-	$m_port->stopbits(1);
-	$m_port->handshake("none");
-	$m_port->read_interval(100) if $Config{'osname'} eq "MSWin32";
-	$m_port->read_char_time(0);
-	$m_port->read_const_time(1000);
+		$m_raw_log = new FileHandle();
+		if ($m_raw_log->open(">>$raw_log_file"))
+		{
+			$m_raw_log->autoflush(1);
+			$data{'RAW_LOG'} = $m_raw_log;
+		}
+		else
+		{
+			warn "Warning: Cannot open raw log file \"$raw_log_file\" for append: $!\n";
+		}
 
-	$data{'PORT'} = $m_port;
+		unless ($m_port_name)
+		{
+			warn "Error: No port was specified in the passed data.\n";
+			return undef;
+		}
+		unless ($baudrate)
+		{
+			warn "Error: No baudrate was specified in the passed data.\n";
+			return undef;
+		}
+
+		if ($Config{'osname'} eq "MSWin32")
+		{
+			$m_port = new Win32::SerialPort($m_port_name) or
+				warn "Error: Cannot open serial port \"$m_port_name\": $^E\n";
+		}
+		else
+		{
+			$m_port = new Device::SerialPort($m_port_name) or
+				warn "Error: Cannot open serial port \"$m_port_name\": $!\n";
+		}
+		$m_port->baudrate($baudrate);
+		$m_port->parity("none");
+		$m_port->databits(8);
+		$m_port->stopbits(1);
+		$m_port->handshake("none");
+		$m_port->read_interval(100) if $Config{'osname'} eq "MSWin32";
+		$m_port->read_char_time(0);
+		$m_port->read_const_time(1000);
+
+		$data{'PORT'} = $m_port;
+	}
 	my $self = bless \%data, $class;
 
 	return $self;
@@ -230,13 +272,13 @@ sub read_kiss_frame
 	my $self = shift;
 	my @frame;
 	my $fend_count = 0;
-	while(1)
+	if ($self->{'FILE'})
 	{
-		# Processing one byte at a time makes things nice and easy
-		my ($count,$saw) = $self->{'PORT'}->read(1);
-		if ($count > 0)
+		while(1)
 		{
-			$self->{'RAW_LOG'}->write($saw) if $self->{'RAW_LOG'};
+			# Processing the file one byte at a time
+			my $saw = $self->{'FILE_HANDLE'}->getc();
+
 			$fend_count++ if (ord($saw) == $FEND);
 			# Make sure we don't add bytes to the frame that are before the first FEND
 			push @frame, $saw if $fend_count > 0;
@@ -254,6 +296,37 @@ sub read_kiss_frame
 					# So start the search again.
 					$fend_count--;
 					@frame = ($saw);
+				}
+			}
+		}
+	}
+	else
+	{
+		while(1)
+		{
+			# Processing one byte at a time makes things nice and easy
+			my ($count,$saw) = $self->{'PORT'}->read(1);
+			if ($count > 0)
+			{
+				$self->{'RAW_LOG'}->write($saw) if $self->{'RAW_LOG'};
+				$fend_count++ if (ord($saw) == $FEND);
+				# Make sure we don't add bytes to the frame that are before the first FEND
+				push @frame, $saw if $fend_count > 0;
+
+				if ($fend_count == 2)
+				{
+					if (scalar @frame > 2)
+					{
+						# We have data in the frame so return it.
+						last;
+					}
+					else
+					{
+						# we have an empty frame or we got the end of one frame and the start of another.
+						# So start the search again.
+						$fend_count--;
+						@frame = ($saw);
+					}
 				}
 			}
 		}

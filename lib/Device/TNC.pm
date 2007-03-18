@@ -1,7 +1,7 @@
 
 =head1 NAME
 
-Device::TNC - A module to talk to a TNC
+Device::TNC - A generic interface to a TNC
 
 =head1 DESCRIPTION
 
@@ -52,7 +52,7 @@ use vars qw(@ISA @EXPORT @EXPORT_OK $VERSION);
 @ISA = qw();
 @EXPORT = qw();
 @EXPORT_OK = qw();
-$VERSION = 0.01;
+$VERSION = 0.02;
 $| = 1;
 
 my $translator = new Data::Translate();
@@ -154,10 +154,10 @@ The structure of the returned data is like the following.
 
   {
     'INFO' => [
-      '!', '3', '3', '5', '1', '.', '8', '9', 'S', 'U', '1', '5', '1', '1', '2',
-      '.', '2', '2', 'E', '#', 'P', 'H', 'G', '5', '7', '5'
-      ],
-    'FCS' => '4345',
+      '/', '0', '6', '4', '6', '5', '8', 'h', '3', '3', '5', '0', '.', '0', '0',
+      'S', '\\', '1', '5', '1', '1', '2', '.', '0', '0', 'E', 'O', '2', '2', '6',
+      '/', '0', '0', '0', '/', 'A', '=', '0', '0', '0', '1', '1', '1'
+    ],
     'PID' => 'F0',
     'CONTROL' => {
       'POLL_FINAL' => 0,
@@ -165,24 +165,28 @@ The structure of the returned data is like the following.
       'FRAME_TYPE' => 'U'
     },
     'ADDRESS' => {
-      'DESTINATION' => 'APZ186',
+      'DESTINATION' => 'APT311',
       'REPEATERS' => [
-        'TRACE3-3'
-      ],
-      'SOURCE' => 'VK2JPJ-1'
+        'WIDE1-1',
+        'WIDE2-2'
+        ],
+      'SOURCE' => 'VK2KFJ-7'
     }
   }
 
 While developing this module I only received U (UI) type frames and so
 development of the code to work with I and S frames didn't really progress.
 If anyone want's to read I or S frames please let me know and I'll have a look
-at implementing them.
+at implementing them. Please create a KISS log of the data and email it to me.
 
-While the Frame Check Sequense is being read at the moment the code does not
-check that the received frame is valid.
+According to the AX.25 standard there are supposed to be two bytes at the and of
+the frame that contain the Frame Check Sequense (FCS) commonly know as a CRC.
 
-I'd really love some one who knows about such things to implement a routine to
-check if the received frame is valid.
+While developing this code I have found that these two bytes are bot passed from
+my TNC-X to the user. I'm not sure if this is how all TNC's work however.
+Again if someone could create a raw KISS log of some packets that contain this
+data and send it to me then I can have a look at implementing a check in this
+module.
 
 =cut
 
@@ -310,8 +314,9 @@ sub read_ax25_frame
 
 		$data{'PID'} = sprintf("%02X", ord($frame[$location]));
 		$location++;
-		while ( (my $byte = $frame[$location]) and ( ($location ne $#frame) or ($location ne $#frame - 1)) )
+		while ($location <= $#frame)
 		{
+			my $byte = $frame[$location];
 			#my ($s, $ascii) = $translator->h2a(sprintf("%X",$byte));
 			push @{$data{'INFO'}},  $byte;
 			$location++;
@@ -321,7 +326,9 @@ sub read_ax25_frame
 	{
 		warn "Error: Couldn't determine the frame type.\n";
 	}
-	$data{'FCS'} = sprintf("%02X", ord($frame[$#frame - 1])) . sprintf("%02X", ord($frame[$#frame]));
+
+	#Finally get the Frame Check Sequence which is the last two bytes of the frame
+	#$data{'FCS'} = sprintf("%02X", ord($frame[$#frame - 1])) . sprintf("%02X", ord($frame[$#frame]));
 
 	if (wantarray)
 	{

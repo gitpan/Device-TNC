@@ -1,12 +1,10 @@
 This is the README file for the Perl module Device::TNC
 
-This module was created created purely because I knew Perl better than C and
-Perl has so many lovely modules available to make a developer life easy.
-
 What does Device::TNC provide?
 
 The module Device::TNC provides the basis of a generic set of modules that can
 be used to interface with a Terminal Node Controller (TNC).
+The subclass module has been developed to talk to KISS mode TNC's.
 
 What's a TNC?
 
@@ -34,6 +32,12 @@ perl Makefile.PL
 make
 make test (This is optional but recommended)
 make install
+
+Bugs
+
+Bugs should be reported to bug-Device-TNC@rt.cpan.org.
+If using the Device::TNC::KISS module please include a raw KISS log file that
+contains examples of the frames that are not being processed correctly.
 
 Copyright (C) 2007, Australian Space Research Institute.
 

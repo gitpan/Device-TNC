@@ -3,4 +3,5 @@
   Then use this module per usual.
 * Implement methods to write to a KISS TNC.
 * Implement methods to write AX.25 frames.
-* Implement Frame Check Sequences (FCS) or CRCs.
+* Implement Frame Check Sequences (FCS) or CRCs if they are included in the
+  frame that is sent to the computer. They aren't with the TNC-X.

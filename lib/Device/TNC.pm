@@ -26,7 +26,7 @@ user is human readable form.
 
   while (1)
   {
-    my $data = $tnc->read_ax25_frame();
+    my $data = $tnc->read_frame();
     my $repeaters = join ", ", @{$data->{'ADDRESS'}->{'REPEATERS'}};
     my $info = join "", @{$data->{'INFO'}};
     print "From: $data->{'ADDRESS'}->{'SOURCE'} ";
@@ -52,7 +52,7 @@ use vars qw(@ISA @EXPORT @EXPORT_OK $VERSION);
 @ISA = qw();
 @EXPORT = qw();
 @EXPORT_OK = qw();
-$VERSION = 0.02;
+$VERSION = 0.03;
 $| = 1;
 
 my $translator = new Data::Translate();
@@ -142,13 +142,13 @@ sub new
 
 ################################################################################
 
-=head2 B<read_ax25_frame()>
+=head2 B<read_frame()>
 
- my $ax25_data = $tnc->read_ax25_frame();
- my %ax25_data = $tnc->read_ax25_frame();
+ my $frame_data = $tnc->read_frame();
+ my %frame_data = $tnc->read_frame();
 
 This method reads a HDLC frame from the TNC and returns a structure as either a
-hash or a hash reference that contains the fields of the AX.25 frame.
+hash or a hash reference that contains the fields of the frame.
 
 The structure of the returned data is like the following.
 
@@ -179,18 +179,9 @@ development of the code to work with I and S frames didn't really progress.
 If anyone want's to read I or S frames please let me know and I'll have a look
 at implementing them. Please create a KISS log of the data and email it to me.
 
-According to the AX.25 standard there are supposed to be two bytes at the and of
-the frame that contain the Frame Check Sequense (FCS) commonly know as a CRC.
-
-While developing this code I have found that these two bytes are bot passed from
-my TNC-X to the user. I'm not sure if this is how all TNC's work however.
-Again if someone could create a raw KISS log of some packets that contain this
-data and send it to me then I can have a look at implementing a check in this
-module.
-
 =cut
 
-sub read_ax25_frame
+sub read_frame
 {
 	my $self = shift;
 	my %data;

@@ -1,3 +1,12 @@
+Release 0.03
+  * Have tracked down the cause of connection problems in Windows. It turns
+  out I believe to be a bug in Win32::SerialPort where the baudrate is not
+  being set correctly. A bug has been raised which I assume will be fixed in
+  the next version. See http://rt.cpan.org/Ticket/Display.html?id=25539
+  * The read_ax25_frame method in Device::TNC has been renamed to read_frame as
+  this not an AX.25 frame at this point. It's already been decoded by the TNC.
+  Though all the fields are containded in the frame except the FCS.
+
 Release 0.02
   * Fixed a bug that caused most of the data in the INFO field to be ignored.
   * Now the full INFO field for the captured frame is being included.
